@@ -93,6 +93,18 @@ class InventarioViewModel(private val repository: InventarioRepository) : ViewMo
         viewModelScope.launch { repository.eliminarEquipo(equipo) }
     }
 
+    fun editarEquipo(equipo: Equipo, nombre: String, cat: String, marca: String, serie: String, uri: String? = null) {
+        viewModelScope.launch {
+            repository.actualizarEquipo(equipo.copy(
+                nombre = nombre,
+                categoria = cat,
+                marca = marca,
+                numeroSerie = serie,
+                imagenUri = uri ?: equipo.imagenUri
+            ))
+        }
+    }
+
     // === ACCIONES DE PRÉSTAMOS ===
     fun realizarPrestamo(equipo: Equipo, solicitante: String) {
         viewModelScope.launch {

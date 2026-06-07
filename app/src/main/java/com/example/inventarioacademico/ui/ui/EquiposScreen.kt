@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import com.example.inventarioacademico.data.Equipo
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,12 +36,13 @@ fun EquiposScreen(viewModel: InventarioViewModel) {
     val categorias by viewModel.categoriasDisponibles.collectAsState()
     val context = LocalContext.current
 
-    var showDialog by remember { mutableStateOf(false) }
+    var showAddDialog by remember { mutableStateOf(false) }
+    var equipoAEditar by remember { mutableStateOf<Equipo?>(null) }
 
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(
-                onClick = { showDialog = true },
+                onClick = { showAddDialog = true },
                 containerColor = MaterialTheme.colorScheme.primary
             ) {
                 Icon(Icons.Default.Add, contentDescription = "Agregar Equipo", tint = Color.White)
@@ -55,25 +57,21 @@ fun EquiposScreen(viewModel: InventarioViewModel) {
             ) {
                 Text("📦 Inventario Pro", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.ExtraBold)
                 
-                Row {
-                    // Botón Exportar CSV (Simulado como Excel en texto)
-                    IconButton(onClick = {
-                        val csvData = viewModel.obtenerTextoCSV()
-                        val intent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/csv"
-                            putExtra(Intent.EXTRA_SUBJECT, "Inventario_Equipos.csv")
-                            putExtra(Intent.EXTRA_TEXT, csvData)
-                        }
-                        context.startActivity(Intent.createChooser(intent, "Exportar a Excel (CSV)"))
-                    }) {
-                        Icon(Icons.Default.FileDownload, contentDescription = "Exportar", tint = MaterialTheme.colorScheme.primary)
+                IconButton(onClick = {
+                    val csvData = viewModel.obtenerTextoCSV()
+                    val intent = Intent(Intent.ACTION_SEND).apply {
+                        type = "text/csv"
+                        putExtra(Intent.EXTRA_SUBJECT, "Inventario_Equipos.csv")
+                        putExtra(Intent.EXTRA_TEXT, csvData)
                     }
+                    context.startActivity(Intent.createChooser(intent, "Exportar a Excel (CSV)"))
+                }) {
+                    Icon(Icons.Default.FileDownload, contentDescription = "Exportar", tint = MaterialTheme.colorScheme.primary)
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Buscador con diseño mejorado
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.actualizarBusqueda(it) },
@@ -88,7 +86,6 @@ fun EquiposScreen(viewModel: InventarioViewModel) {
                 singleLine = true
             )
 
-            // Filtros de Categoría (Chips)
             if (categorias.isNotEmpty()) {
                 LazyRow(
                     modifier = Modifier.padding(vertical = 12.dp),
@@ -108,11 +105,10 @@ fun EquiposScreen(viewModel: InventarioViewModel) {
                 }
             }
 
-            // Lista de Equipos con Imágenes
             if (equipos.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.Inventory2, contentDescription = null, size = 64.dp, tint = Color.LightGray)
+                        Icon(Icons.Default.Inventory2, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
                         Text("No hay equipos registrados", color = Color.Gray)
                     }
                 }
@@ -125,6 +121,7 @@ fun EquiposScreen(viewModel: InventarioViewModel) {
                     items(equipos) { equipo ->
                         EquipoCard(
                             equipo = equipo,
+                            onEdit = { equipoAEditar = equipo },
                             onDelete = { viewModel.eliminarEquipo(equipo) }
                         )
                     }
@@ -133,19 +130,30 @@ fun EquiposScreen(viewModel: InventarioViewModel) {
         }
     }
 
-    if (showDialog) {
-        AddEquipoDialog(
-            onDismiss = { showDialog = false },
+    if (showAddDialog) {
+        AddEditEquipoDialog(
+            onDismiss = { showAddDialog = false },
             onConfirm = { n, c, m, s, u ->
                 viewModel.agregarEquipo(n, c, m, s, u)
-                showDialog = false
+                showAddDialog = false
+            }
+        )
+    }
+
+    if (equipoAEditar != null) {
+        AddEditEquipoDialog(
+            equipo = equipoAEditar,
+            onDismiss = { equipoAEditar = null },
+            onConfirm = { n, c, m, s, u ->
+                viewModel.editarEquipo(equipoAEditar!!, n, c, m, s, u)
+                equipoAEditar = null
             }
         )
     }
 }
 
 @Composable
-fun EquipoCard(equipo: com.example.inventarioacademico.data.Equipo, onDelete: () -> Unit) {
+fun EquipoCard(equipo: Equipo, onEdit: () -> Unit, onDelete: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -156,7 +164,6 @@ fun EquipoCard(equipo: com.example.inventarioacademico.data.Equipo, onDelete: ()
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Imagen del Equipo
             Box(
                 modifier = Modifier
                     .size(80.dp)
@@ -199,20 +206,29 @@ fun EquipoCard(equipo: com.example.inventarioacademico.data.Equipo, onDelete: ()
                 }
             }
 
-            IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f))
+            Row {
+                IconButton(onClick = onEdit) {
+                    Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
+                }
+                IconButton(onClick = onDelete) {
+                    Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = MaterialTheme.colorScheme.error.copy(alpha = 0.7f))
+                }
             }
         }
     }
 }
 
 @Composable
-fun AddEquipoDialog(onDismiss: () -> Unit, onConfirm: (String, String, String, String, String?) -> Unit) {
-    var nombre by remember { mutableStateOf("") }
-    var categoria by remember { mutableStateOf("") }
-    var marca by remember { mutableStateOf("") }
-    var serie by remember { mutableStateOf("") }
-    var imageUri by remember { mutableStateOf<Uri?>(null) }
+fun AddEditEquipoDialog(
+    equipo: Equipo? = null,
+    onDismiss: () -> Unit,
+    onConfirm: (String, String, String, String, String?) -> Unit
+) {
+    var nombre by remember { mutableStateOf(equipo?.nombre ?: "") }
+    var categoria by remember { mutableStateOf(equipo?.categoria ?: "") }
+    var marca by remember { mutableStateOf(equipo?.marca ?: "") }
+    var serie by remember { mutableStateOf(equipo?.numeroSerie ?: "") }
+    var imageUri by remember { mutableStateOf<Uri?>(equipo?.imagenUri?.let { Uri.parse(it) }) }
 
     val launcher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -222,10 +238,9 @@ fun AddEquipoDialog(onDismiss: () -> Unit, onConfirm: (String, String, String, S
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Nuevo Equipo") },
+        title = { Text(if (equipo == null) "Nuevo Equipo" else "Editar Equipo") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                // Selector de Imagen
                 Box(
                     modifier = Modifier
                         .size(100.dp)
@@ -255,15 +270,11 @@ fun AddEquipoDialog(onDismiss: () -> Unit, onConfirm: (String, String, String, S
                 onClick = { if (nombre.isNotBlank() && categoria.isNotBlank()) onConfirm(nombre, categoria, marca, serie, imageUri?.toString()) },
                 shape = RoundedCornerShape(12.dp)
             ) {
-                Text("Registrar")
+                Text(if (equipo == null) "Registrar" else "Guardar Cambios")
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancelar") }
         }
     )
-}
-
-private fun Icon(icon: androidx.compose.ui.graphics.vector.ImageVector, contentDescription: String?, size: androidx.compose.ui.unit.Dp, tint: Color) {
-    // Helper to avoid ambiguity if needed, though usually not necessary with proper imports
 }

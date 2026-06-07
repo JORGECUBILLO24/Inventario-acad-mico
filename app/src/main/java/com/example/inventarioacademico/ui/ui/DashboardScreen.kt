@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -14,61 +16,75 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 
 @Composable
-fun DashboardScreen(viewModel: InventarioViewModel) {
+fun DashboardScreen(viewModel: InventarioViewModel, onLogout: () -> Unit) {
     val total by viewModel.totalEquipos.collectAsState()
     val disp by viewModel.disponibles.collectAsState()
     val prestados by viewModel.prestados.collectAsState()
     val topCat by viewModel.categoriaTop.collectAsState()
     val datosGrafico by viewModel.datosGrafico.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text("📊 Dashboard de Inventario", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-        Spacer(modifier = Modifier.height(24.dp))
-
-        // Cards de Resumen
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            StatCard("Total", "$total", MaterialTheme.colorScheme.primaryContainer, Modifier.weight(1f))
-            StatCard("Disponibles", "$disp", Color(0xFFC8E6C9), Modifier.weight(1f))
-            StatCard("Prestados", "$prestados", Color(0xFFFFCDD2), Modifier.weight(1f))
+    Scaffold(
+        topBar = {
+            @OptIn(ExperimentalMaterial3Api::class)
+            TopAppBar(
+                title = { Text("Resumen de Laboratorio") },
+                actions = {
+                    IconButton(onClick = onLogout) {
+                        Icon(Icons.Default.Logout, contentDescription = "Cerrar Sesión")
+                    }
+                }
+            )
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        ElevatedCard(
-            modifier = Modifier.fillMaxWidth(),
-            colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text("🏆 Categoría Líder", style = MaterialTheme.typography.labelLarge)
-                Text(topCat, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+            Text("📊 Dashboard de Inventario", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Cards de Resumen
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                StatCard("Total", "$total", MaterialTheme.colorScheme.primaryContainer, Modifier.weight(1f))
+                StatCard("Disponibles", "$disp", Color(0xFFC8E6C9), Modifier.weight(1f))
+                StatCard("Prestados", "$prestados", Color(0xFFFFCDD2), Modifier.weight(1f))
             }
-        }
 
-        Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        // Simulación de Gráfico de Barras por Categoría
-        Text("Distribución por Categoría", style = MaterialTheme.typography.titleMedium, modifier = Modifier.align(Alignment.Start))
-        Spacer(modifier = Modifier.height(16.dp))
-
-        if (datosGrafico.isEmpty()) {
-            Text("No hay datos suficientes para generar estadísticas.", color = Color.Gray)
-        } else {
-            datosGrafico.forEach { (categoria, cantidad) ->
-                BarChartRow(categoria, cantidad, total)
-                Spacer(modifier = Modifier.height(8.dp))
+            ElevatedCard(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.elevatedCardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("🏆 Categoría Líder", style = MaterialTheme.typography.labelLarge)
+                    Text(topCat, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                }
             }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Simulación de Gráfico de Barras por Categoría
+            Text("Distribución por Categoría", style = MaterialTheme.typography.titleMedium, modifier = Modifier.align(Alignment.Start))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (datosGrafico.isEmpty()) {
+                Text("No hay datos suficientes para generar estadísticas.", color = Color.Gray)
+            } else {
+                datosGrafico.forEach { (categoria, cantidad) ->
+                    BarChartRow(categoria, cantidad, total)
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+            }
+            
+            Spacer(modifier = Modifier.height(32.dp))
         }
-        
-        Spacer(modifier = Modifier.height(32.dp))
     }
 }
 

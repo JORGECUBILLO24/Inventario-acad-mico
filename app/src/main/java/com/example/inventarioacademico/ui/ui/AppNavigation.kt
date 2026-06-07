@@ -16,57 +16,78 @@ fun AppNavigation(viewModel: InventarioViewModel) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
 
+    // Solo mostramos la barra de navegación si NO estamos en la pantalla de login
+    val showBottomBar = currentRoute != "login"
+
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = currentRoute == "dashboard",
-                    onClick = {
-                        navController.navigate("dashboard") {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    icon = { Text("📊") },
-                    label = { Text("Dashboard") }
-                )
+            if (showBottomBar) {
+                NavigationBar {
+                    NavigationBarItem(
+                        selected = currentRoute == "dashboard",
+                        onClick = {
+                            navController.navigate("dashboard") {
+                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        icon = { Text("📊") },
+                        label = { Text("Dashboard") }
+                    )
 
-                NavigationBarItem(
-                    selected = currentRoute == "equipos",
-                    onClick = {
-                        navController.navigate("equipos") {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    icon = { Text("💻") },
-                    label = { Text("Equipos") }
-                )
+                    NavigationBarItem(
+                        selected = currentRoute == "equipos",
+                        onClick = {
+                            navController.navigate("equipos") {
+                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        icon = { Text("💻") },
+                        label = { Text("Equipos") }
+                    )
 
-                NavigationBarItem(
-                    selected = currentRoute == "prestamos",
-                    onClick = {
-                        navController.navigate("prestamos") {
-                            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    icon = { Text("🤝") },
-                    label = { Text("Préstamos") }
-                )
+                    NavigationBarItem(
+                        selected = currentRoute == "prestamos",
+                        onClick = {
+                            navController.navigate("prestamos") {
+                                popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        icon = { Text("🤝") },
+                        label = { Text("Préstamos") }
+                    )
+                }
             }
         }
     ) { paddingValues ->
-        // Aquí se decide qué pantalla mostrar según la ruta
         NavHost(
             navController = navController,
-            startDestination = "dashboard",
+            startDestination = "login",
             modifier = Modifier.padding(paddingValues)
         ) {
-            composable("dashboard") { DashboardScreen(viewModel) }
+            composable("login") {
+                LoginScreen(
+                    viewModel = viewModel,
+                    onLoginSuccess = {
+                        navController.navigate("dashboard") {
+                            popUpTo("login") { inclusive = true }
+                        }
+                    }
+                )
+            }
+            composable("dashboard") { 
+                DashboardScreen(viewModel, onLogout = {
+                    viewModel.cerrarSesion()
+                    navController.navigate("login") {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }) 
+            }
             composable("equipos") { EquiposScreen(viewModel) }
             composable("prestamos") { PrestamosScreen(viewModel) }
         }
